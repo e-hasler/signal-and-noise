@@ -1,0 +1,29 @@
+{"doc": 
+
+{"ind": 24, 
+"query": "Roof shingle removal: A man is sitting on a roof. He", 
+"choices": ["is using wrap to wrap a pair of skis.", "is ripping level tiles off.", "is holding a rubik's cube.", "starts pulling up roofing on a roof."], 
+"gold": 3}, 
+
+
+"task_name": "hellaswag", 
+"doc_id": 0, 
+"native_id": 24, 
+"label": 3, 
+"requests": 
+    [
+        {"request_type": "loglikelihood", 
+        "request": 
+                {"context": "Roof shingle removal: A man is sitting on a roof. He", 
+                "continuation": " is using wrap to wrap a pair of skis."}, 
+        "idx": 0}, 
+        {"request_type": "loglikelihood", 
+        "request": 
+                {"context": "Roof shingle removal: A man is sitting on a roof. He", 
+                "continuation": " is ripping level tiles off."}, 
+        "idx": 1}, 
+        
+        {"request_type": "loglikelihood", "request": {"context": "Roof shingle removal: A man is sitting on a roof. He", "continuation": " is holding a rubik's cube."}, "idx": 2},
+        {"request_type": "loglikelihood", "request": {"context": "Roof shingle removal: A man is sitting on a roof. He", "continuation": " starts pulling up roofing on a roof."}, "idx": 3}]}
+{"doc": {"ind": 92, "query": "Clean and jerk: A lady walks to a barbell. She bends down and grabs the pole. The lady", "choices": ["swings and lands in her arms.", "pulls the barbell forward.", "pulls a rope attached to the barbell.", "stands and lifts the weight over her head."], "gold": 3}, "task_name": "hellaswag", "doc_id": 1, "native_id": 92, "label": 3, "requests": [{"request_type": "loglikelihood", "request": {"context": "Clean and jerk: A lady walks to a barbell. She bends down and grabs the pole. The lady", "continuation": " swings and lands in her arms."}, "idx": 0}, {"request_type": "loglikelihood", "request": {"context": "Clean and jerk: A lady walks to a barbell. She bends down and grabs the pole. The lady", "continuation": " pulls the barbell forward."}, "idx": 1}, {"request_type": "loglikelihood", "request": {"context": "Clean and jerk: A lady walks to a barbell. She bends down and grabs the pole. The lady", "continuation": " pulls a rope attached to the barbell."}, "idx": 2}, {"request_type": "loglikelihood", "request": {"context": "Clean and jerk: A lady walks to a barbell. She bends down and grabs the pole. The lady", "continuation": " stands and lifts the weight over her head."}, "idx": 3}]}
+{"doc": {"ind": 106, "query": "Canoeing: Two women in a child are shown in a canoe while a man pulls the canoe while standing in the water, with other individuals visible in the background. The child and a different man", "choices": ["are then shown paddling down a river in a boat while a woman talks.", "are driving the canoe, they go down the river flowing side to side.", "sit in a canoe while the man paddles.", "walking go down the rapids, while the man in his helicopter almost falls and goes out of canoehood."], "gold": 2}, "task_name": "hellaswag", "doc_id": 2, "native_id": 106, "label": 2, "requests": [{"request_type": "loglikelihood", "request": {"context": "Canoeing: Two women in a child are shown in a canoe while a man pulls the canoe while standing in the water, with other individuals visible in the background. The child and a different man", "continuation": " are then shown paddling down a river in a boat while a woman talks."}, "idx": 0}, {"request_type": "loglikelihood", "request": {"context": "Canoeing: Two women in a child are shown in a canoe while a man pulls the canoe while standing in the water, with other individuals visible in the background. The child and a different man", "continuation": " are driving the canoe, they go down the river flowing side to side."}, "idx": 1}, {"request_type": "loglikelihood", "request": {"context": "Canoeing: Two women in a child are shown in a canoe while a man pulls the canoe while standing in the water, with other individuals visible in the background. The child and a different man", "continuation": " sit in a canoe while the man paddles."}, "idx": 2}, {"request_type": "loglikelihood", "request": {"context": "Canoeing: Two women in a child are shown in a canoe while a man pulls the canoe while standing in the water, with other individuals visible in the background. The child and a different man", "continuation": " walking go down the rapids, while the man in his helicopter almost falls and goes out of canoehood."}, "idx": 3}]}
