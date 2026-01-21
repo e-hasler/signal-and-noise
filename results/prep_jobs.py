@@ -1,5 +1,6 @@
 # submit_fold_jobs.py
 import os
+import shlex
 
 selected_tasks = ['hellaswag', 'openbookqa', 'socialiqa', 'winogrande']
 models_to_evaluate = ['allenai/DataDecide-dclm-baseline-75p-dolma1.7-25p-150M', 
@@ -14,27 +15,35 @@ for task in selected_tasks:
         j = 1
         for i in range(1, 5):
             job_name = f"eval-{task}-f{i}-m{j}"
-            cmd = f"cd /mloscratch/homes/ehasler/signal-and-noise && " \
+            cmd = f"cd /nlpscratch/home/ehasler/signal-and-noise && " \
+                  f"export HF_HOME=/nlpscratch/home/ehasler/.cache " \
                   f"python results/permissive_eval.py " \
                   f"--model {model} " \
                   f"--revision step{corr_steps[j]}-seed-default " \
                   f"--task {task}_flexible " \
                   f"--split fold_{i} " \
-                  f"--output-dir results/k_folds/{task}_fold_{i}_{corr_models[j]} " \
+                  f"--output-dir /nlpscratch/home/ehasler/signal-and-noise/results/k_folds/{task}_fold_{i}_{corr_models[j]} " \
                   f"--gpus 0"
-            
-            os.system(f'python csub.py -n {job_name} -g 1 --train --command "{cmd}"')
+            safe_cmd = shlex.quote(cmd)
+            #os.system(f"python getting-started/csub.py -n {job_name} -g 1 --train --train --secret-name runai-nlp-ehasler-env --command {safe_cmd}")
+            os.system(f'python /Users/eleonore.hasler/getting-started/csub.py -n {job_name} -g 1 --train --secret-name runai-nlp-ehasler-env --env-file /Users/eleonore.hasler/getting-started/.env --command "{safe_cmd}"')
+            break
     else:
+        break
         for j, model in enumerate(models_to_evaluate):
             for i in range(5):
                 job_name = f"eval-{task}-f{i}-m{j}"
-                cmd = f"cd /mloscratch/homes/ehasler/signal-and-noise && " \
+                cmd = f"cd /nlpscratch/home/ehasler/signal-and-noise && " \
+                      f"export HF_HOME=/nlpscratch/home/ehasler/.cache " \
                       f"python results/permissive_eval.py " \
                       f"--model {model} " \
                       f"--revision step{corr_steps[j]}-seed-default " \
                       f"--task {task}_flexible " \
                       f"--split fold_{i} " \
-                      f"--output-dir results/k_folds/{task}_fold_{i}_{corr_models[j]} " \
+                      f"--output-dir /nlpscratch/home/ehasler/signal-and-noise/results/k_folds/{task}_fold_{i}_{corr_models[j]} " \
                       f"--gpus 0"
-                
-                os.system(f'python csub.py -n {job_name} -g 1 --train --command "{cmd}"')
+
+                safe_cmd = shlex.quote(cmd)
+                #os.system(f"python getting-started/csub.py -n {job_name} -g 1 --train --train --secret-name runai-nlp-ehasler-env --command {safe_cmd}")
+                os.system(f'python /Users/eleonore.hasler/getting-started/csub.py -n {job_name} -g 1 --train --secret-name runai-nlp-ehasler-env --env-file /Users/eleonore.hasler/getting-started/.env --command "{safe_cmd}"')
+

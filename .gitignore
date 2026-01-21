@@ -20,7 +20,7 @@ venv
 workspace/
 
 
-.vscode
-d:/
-deps/olmes/
-snr/
+#.vscode
+#d:/
+#deps/olmes/
+#snr/
