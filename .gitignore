@@ -10,7 +10,7 @@ __pycache__/
 analysis/data
 blog.ipynb
 data/
-deps
+#deps
 gcp-service-account.json
 img/
 olmes_requests/
