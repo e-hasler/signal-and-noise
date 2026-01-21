@@ -4,7 +4,7 @@ Wrapper that registers FlexibleHellaswag task, then calls oe_eval
 import os
 from typing import Optional
 from datasets import load_dataset, load_from_disk, DatasetDict
-from oe_eval.tasks.oe_eval_tasks import TASK_REGISTRY
+from deps.olmes.oe_eval.tasks.oe_eval_tasks import TASK_REGISTRY
 
 # Get the original HellaSwag task class
 OriginalHellaswag = TASK_REGISTRY['hellaswag']
