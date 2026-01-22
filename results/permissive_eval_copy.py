@@ -15,7 +15,7 @@ for _p in (_ROOT, _ROOT / "deps" / "olmes"):
     if _p_str not in sys.path:
         sys.path.append(_p_str)
 
-from deps.olmes.oe_eval.tasks.oe_eval_tasks import TASK_REGISTRY
+from oe_eval.tasks.oe_eval_tasks import TASK_REGISTRY
 
 # Get the original HellaSwag task class
 OriginalHellaswag = TASK_REGISTRY['hellaswag']
