@@ -217,7 +217,6 @@ if OriginalWinogrande:
 # Now call the actual evaluator with the registered task available
 if __name__ == "__main__":
     from oe_eval.run_eval import run_eval
-    import argparse
     from oe_eval import run_eval as run_eval_module
     
     # Parse arguments using oe_eval's parser
