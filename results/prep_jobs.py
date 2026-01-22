@@ -6,7 +6,7 @@ selected_tasks = ['hellaswag', 'openbookqa', 'socialiqa', 'winogrande']
 models_to_evaluate = ['allenai/DataDecide-dclm-baseline-75p-dolma1.7-25p-150M', 
                       'allenai/DataDecide-falcon-and-cc-qc-orig-10p-530M']
 corr_models = ['dolma17-25p-DCLM-baseline-75p-150M-5xC', 'falcon_and_cc_tulu_qc_top10-530M-5xC']
-corr_steps = [38157, 57500]
+corr_steps = [38157, 57776]  # Updated: 57500 -> 57776 (actual available revision for falcon model)
 
 for task in selected_tasks:
     if task == 'hellaswag':
