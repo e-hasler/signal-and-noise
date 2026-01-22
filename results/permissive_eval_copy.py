@@ -8,8 +8,8 @@ from typing import Optional
 from datasets import load_dataset, load_from_disk, DatasetDict
 
 # Ensure local deps (e.g., deps/olmes) are importable when run as a script.
-# __file__ is .../results/permissive_eval_copy.py, so repo root is parents[2].
-_ROOT = Path(__file__).resolve().parents[2]
+# __file__ is .../results/permissive_eval_copy.py, so repo root is parents[1].
+_ROOT = Path(__file__).resolve().parents[1]
 for _p in (_ROOT, _ROOT / "deps" / "olmes"):
     _p_str = str(_p)
     if _p_str not in sys.path:
