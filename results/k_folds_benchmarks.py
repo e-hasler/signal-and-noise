@@ -7,7 +7,7 @@ import os
 import subprocess
 import math
 from snr_utils import compute_score_model
-# Code for k-fold on Hellaswag (benchmark) with [name of model].
+# Code to create k-folds on benchmarks and push to HuggingFace hub
 
 
 
@@ -221,8 +221,8 @@ def main():
         #    folds_dataset.push_to_hub(repo_id = "ehasler/arc-easy-k5-folds", private = True)
         #if benchmark == "arc_challenge":
         #    folds_dataset.push_to_hub(repo_id = "ehasler/arc-challenge-k5-folds", private = True)
-        
-        #folds_dataset.push_to_hub(repo_id = f"ehasler/{benchmark}-k5-folds", private = True) #TODO: verify
+        #if benchmark not in ["hellaswag", "arc_easy", "arc_challenge"]:
+            #folds_dataset.push_to_hub(repo_id = f"ehasler/{benchmark}-k5-folds", private = True) #TODO: verify
 
 
         """

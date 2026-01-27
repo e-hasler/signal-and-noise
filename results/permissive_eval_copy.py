@@ -236,4 +236,3 @@ if __name__ == "__main__":
     
     # Run with the custom task registered
     run_eval(args_dict)
-    
