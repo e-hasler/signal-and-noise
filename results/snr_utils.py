@@ -73,7 +73,7 @@ def compute_mean_std(dtf, ta, si, se):
 
 
 # Compute the score of the model on each fold
-def compute_score_model(benchmark: str, model_base: str, step: int, fold_name: str):
+def compute_score_model(benchmarks: list, all_models_names: list, nb_folds: int):
     """
     Load and return the aggregated primary metric score for a model on a fold.
     
@@ -82,54 +82,57 @@ def compute_score_model(benchmark: str, model_base: str, step: int, fold_name: s
     
     Args:
         benchmark: Benchmark name (e.g., 'hellaswag')
-        model_base: Model base name (e.g., 'DCLM-baseline-150M-5xC')
-        step: Training step/checkpoint (e.g., 38750)
-        fold_name: Fold identifier (e.g., 'fold_0')
+        model_name: Model name (e.g., 'dolma17-25p-DCLM-baseline-75p-150M-5xC')
+        nb_folds: Number of folds (e.g., 5)
     
     Returns:
-        float: Aggregated fold-level primary metric score (mean of all instances), or None if not found
+        float: List of benchmark scores for the fold, or None if loading fails.
     """
     import json
-    
-    """     output_dir = os.path.join(
-        "results/k_folds",
-        f"{benchmark}_{model_base}",
-        f"step_{step}",
-        str(fold_name)
-    ) """
-    
-    output_dir = os.path.join(
-        "results/k_folds",
-        f"{benchmark}_{str(fold_name)}"
-    )
 
-    # Look for metrics-all.jsonl in the output directory
-    metrics_file = os.path.join(output_dir, "metrics-all.jsonl")
-    
-    if not os.path.exists(metrics_file):
-        print(f"Warning: Metrics file not found at {metrics_file}")
-        return None
-    
-    try:
-        # Read JSONL file and collect all primary scores
-        scores = []
-        with open(metrics_file, 'r') as f:
-            for line in f:
-                if line.strip():
-                    result = json.loads(line)
-                    
-                    # Extract primary score from each instance
-                    if 'metrics' in result and 'primary_score' in result['metrics']:
-                        scores.append(result['metrics']['primary_score'])
+    # Nested dict: scores[model][benchmark][fold] = avg_score
+    scores = {}
+
+    for benchmark in benchmarks:
+        for model_name in all_models_names:
+            if model_name not in scores:
+                scores[model_name] = {}
+            if benchmark not in scores[model_name]:
+                scores[model_name][benchmark] = {}
+            for nb in range(nb_folds):
+                fold_name = f"fold_{nb}"
+                output_dir = os.path.join(
+                    "results/k_folds",
+                    f"{benchmark}_{str(fold_name)}"
+                )
+                final_output_dir = f"{output_dir}_{model_name}"
+                metrics_file = os.path.join(final_output_dir, "metrics-all.jsonl")
+
+                if not os.path.exists(metrics_file):
+                    print(f"Warning: Metrics file not found at {metrics_file}")
+                    scores[model_name][benchmark][fold_name] = None
+                    continue
+
+                fold_scores = []
+                try:
+                    with open(metrics_file, 'r') as f:
+                        for line in f:
+                            if line.strip():
+                                result = json.loads(line)
+                                if 'metrics' in result and 'primary_score' in result['metrics']:
+                                    fold_scores.append(result['metrics']['primary_score'])
+                except Exception as e:
+                    print(f"Error loading metrics from {metrics_file}: {e}")
+                    scores[model_name][benchmark][fold_name] = None
+                    continue
+
+                if not fold_scores:
+                    print(f"Warning: No primary_score found in {metrics_file}")
+                    scores[model_name][benchmark][fold_name] = None
+                else:
+                    avg_score = sum(fold_scores) / len(fold_scores)
+                    scores[model_name][benchmark][fold_name] = avg_score
+
+    return scores
         
-        if not scores:
-            print(f"Warning: No primary_score found in {metrics_file}")
-            return None
         
-        # Aggregate: average all instance scores
-        fold_score = np.mean(scores)
-        return fold_score
-    
-    except Exception as e:
-        print(f"Error loading metrics from {metrics_file}: {e}")
-        return None

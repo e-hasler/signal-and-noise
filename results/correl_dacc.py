@@ -30,7 +30,7 @@ selected_sizes = [ '150M', '300M', '530M', '750M', '1B']
 selected_seeds = SEEDS
 
 # Setup to get models (i.e. (mix, seed, size, step)) evaluated on k-folds
-models_used = ['DCLM-baseline-20M-5xC', 'dolma17-25p-DCLM-baseline-75p-150M-5xC', 'falcon_and_cc_tulu_qc_top10-530M-5xC']
+model_used = ['DCLM-baseline-20M-5xC', 'dolma17-25p-DCLM-baseline-75p-150M-5xC', 'falcon_and_cc_tulu_qc_top10-530M-5xC']
 # used 'allenai/DataDecide-dclm-baseline-20M' # 'DCLM-baseline-20M-5xC'
 # and 'allenai/DataDecide-dclm-baseline-75p-dolma1.7-25p-150M', 'allenai/DataDecide-falcon-and-cc-qc-orig-10p-530M'
 mix_used = ['DCLM-baseline', 'dolma17-25p-DCLM-baseline-75p', 'falcon_and_cc_tulu_qc_top10']
@@ -39,10 +39,10 @@ seed_used = [6198, 6198, 6198] # default seed
 step_used = [14594, 38157, 57776] # changed 57500 to 57776
 
 
-models_used = models_used[:1]
+""" model_used = model_used[:1]
 mix_used = mix_used[:1]
 size_used = size_used[:1]
-seed_used = seed_used[:1]
+seed_used = seed_used[:1] """
 # STEP 0 : get dataframe with [task, mix, seed, size, score_per_fold, step, primary_metric]
 
 # Pull data to get task, mix, seed, size, step, primary_metric
@@ -71,7 +71,7 @@ for task in selected_tasks:
         )
         expanded = (
             folds_df.loc[mask]
-            .assign(fold=[list(range(k))] * mask.sum())
+            .assign(fold=[list(range(k))] * mask.sum()) # type: ignore
             .explode('fold')
         )
         folds_df = pd.concat(
@@ -79,62 +79,103 @@ for task in selected_tasks:
             ignore_index=True
         )
 
+display(folds_df.head(20))
+
+folds_df['score_per_fold'] = np.nan
+
 # Get score_per_fold for each task folds in folds_df
-for task in selected_tasks:
-    for i in range(len(mix_used)):
-        mix = mix_used[i]
-        step = step_used[i]
-        for i in range(k):
-            score_fold = compute_score_model(task, mix, step, f"fold_{i}")
+
+for i in range(k):  
+    score_fold = compute_score_model(selected_tasks, model_used, k) # Need to update fn if different model are evaluated on tasks
+    print("ATTENCION score_fold is ", score_fold)
+    
+    for task in selected_tasks:
+
+        for j in range(len(model_used)):
+            mix = mix_used[j]
+            size = size_used[j]
+            step = step_used[j]
+            seed = seed_used[j]
+
             mask = (
                 (folds_df['task'] == task) &
                 (folds_df['mix'] == mix) &
+                (folds_df['size'] == size) &
                 (folds_df['step'] == step) &
+                (folds_df['seed'] == seed) &
                 (folds_df['fold'] == i)
             )
-            folds_df.loc[mask, 'score_per_fold'] = score_fold
 
-print(folds_df[(folds_df['task']=='hellaswag') & (folds_df['fold'].notna())]['size'].unique())
+            fold_name = f"fold_{i}"
+            # Defensive: check keys exist
+            score = None
+            try:
+                score = score_fold[model_used[j]][task][fold_name]
+            except KeyError:
+                print(f"Warning: missing score for model={model_used[j]}, task={task}, fold={fold_name}")
+            folds_df.loc[mask, 'score_per_fold'] = score
+
+            # Instead of doing that, since there are several scores per fold,
+        # we have to compute first the benchmark noise using the score associated to each model 
+        # and then average the result to obtain the benchmark noise of the task
+
+        # So far: folds_df has score_per_fold for each (model, fold) for each task
+        # Next: compute benchmark noise per task wrt each model, then average over models
+
+display(folds_df[folds_df['fold'].notna()].head(20))
 
 
 # STEP 1 : Get measures of signal and noises
 
 # Get benchmark noise "fold_std" (the relative stddev of the score_per_fold for each (mix, task, size, seed))
 
-# Compute per-task benchmark noise from baseline 20M fold scores, then assign to all sizes
-benchmark_noise_by_task = {}
-bench_recap = {}
+# Compute per-task benchmark noise for each (mix, step, size, seed) combination (i.e. model) 
+# and average over models to get per-task benchmark noise
 
-for i, task in enumerate(selected_tasks):
-    
-    base_mask = (
-        (folds_df['task'] == task) &
-        (folds_df['mix'].isin(mix_used)) &
-        (folds_df['size'].isin(size_used)) &
-        (folds_df['seed'].isin(seed_used)) &
-        (folds_df['step'].isin(step_used)) &
-        (folds_df['fold'].notna())
-    )
-    scores = folds_df.loc[base_mask, 'score_per_fold'].values
-    
-    if np.isnan(scores).any():
-        print(f"Warning: NaN scores found for task {task} in benchmark noise computation.")
-    
-    for i in range(k):
-        fold_mask = base_mask & (folds_df['fold'] == i)
-        fold_scores = folds_df.loc[fold_mask, 'score_per_fold'].values
-        bench_recap[(task, f"fold_{i}")] = fold_scores
-    
-    smoothed_scores = [np.mean(bench_recap[(task, f"fold_{i}")]) for i in range(k)]
-    
-    if len(smoothed_scores) >= 2:
-        mean_smoothed_scores = np.mean(smoothed_scores)
-        if np.isfinite(mean_smoothed_scores) and mean_smoothed_scores > 0:
-            benchmark_noise_by_task[task] = np.std(smoothed_scores, ddof=0) / mean_smoothed_scores
+benchmark_noise_per_task_and_model = {}
+benchmark_noise_per_task = {}
 
+for task in selected_tasks:
+    for j in range(len(mix_used)):
+        
+        base_mask = (
+            (folds_df['task'] == task) &
+            (folds_df['mix'] == mix_used[j]) &
+            (folds_df['size'] == size_used[j]) &
+            (folds_df['seed'] == seed_used[j]) &
+            (folds_df['step'] == step_used[j]) &
+            (folds_df['fold'].notna())
+        )
+
+        # Base mask focuses on 1 model and 1 task
+        # Next : compute benchmark noise for that model and task
+
+        scores = folds_df.loc[base_mask, 'score_per_fold'].values
+        print(f"Scores for task {task}, model {model_used[j]}: {scores}")
+        
+        if np.isnan(scores).any():
+            print(f"Warning: NaN scores found for task {task} and model {model_used[j]} in benchmark noise computation.")
+        if len(scores) < 2:
+            print(f"Warning: Not enough scores to compute benchmark noise for task {task} and model {model_used[j]}.")
+            continue
+        
+        mean_score = np.mean(scores) # type: ignore
+        std_score = np.std(scores) # type: ignore
+
+        if mean_score == 0:
+            print(f"Warning: Mean score is zero for task {task} and model {model_used[j]}, cannot compute relative benchmark noise.")
+            benchmark_noise_per_task_and_model[(task, model_used[j])] = np.nan
+
+        benchmark_noise_per_task_and_model[(task, model_used[j])] = std_score / mean_score
+        
+# Average benchmark noise over models for that task
+benchmark_noise_per_task = {
+    task: np.nanmean([benchmark_noise_per_task_and_model.get((task, model), np.nan) for model in model_used])
+    for task in selected_tasks
+}
 
 # Store the same per-task benchmark noise on all rows of that task in metrics_df
-for task, bn in benchmark_noise_by_task.items():
+for task, bn in benchmark_noise_per_task.items():
     metrics_df.loc[metrics_df['task'] == task, 'fold_std'] = bn
 
 # Get step_std, score, mean, std 
@@ -195,7 +236,7 @@ for size in selected_sizes[:-1]:
         step_noise   = np.mean(mix_data['step_std']) / m_mean
         rel_dispersion     = (np.mean(mix_data['max']) - np.mean(mix_data['min'])) / m_mean
         decision_accuracy         = np.mean(mix_data['decision_accuracy'])
-        bench_noise = benchmark_noise_by_task.get(task, np.nan)
+        bench_noise = benchmark_noise_per_task.get(task, np.nan)
                 
         # Require finite and positive SNR ingredients
         if not (np.isfinite(rel_spread) and np.isfinite(step_noise) and np.isfinite(rel_dispersion) and np.isfinite(decision_accuracy)):
