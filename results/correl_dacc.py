@@ -18,8 +18,6 @@ from snr_utils import compute_score_and_stepstd, compute_mean_std, compute_score
 local_path = pull_predictions_from_hf("allenai/signal-and-noise", split_name='datadecide_intermediate')
 df = pd.read_parquet(local_path)
 
-# General setup for signal, noise, decision accuracy
-
 MIXES = df['group'].unique()
 TASKS = df['task'].unique() 
 SEEDS = df['seed'].unique()
@@ -41,71 +39,62 @@ seed_used = [6198, 6198, 6198] # default seed
 step_used = [14594, 38157, 57776] # changed 57500 to 57776
 
 
+models_used = models_used[:1]
+mix_used = mix_used[:1]
+size_used = size_used[:1]
+seed_used = seed_used[:1]
 # STEP 0 : get dataframe with [task, mix, seed, size, score_per_fold, step, primary_metric]
 
 # Pull data to get task, mix, seed, size, step, primary_metric
+
+# Create metrics_df for summary stats (no fold info)
 metrics_df = df[df['size'].isin(selected_sizes) | df['size'].isin(size_used)]
 metrics_df = metrics_df[metrics_df['task'].isin(selected_tasks) | metrics_df['task'].isin(TASKS)]
 metrics_df = metrics_df[['task', 'mix', 'size', 'seed', 'step', 'primary_metric']]
 
+# Create folds_df for all fold-based operations
+folds_df = metrics_df.copy()
 
-#display(metrics_df.head(10))
 # Duplicate each row corresponding to the model(s) evaluated on the k-folds k times and assign fold = 0 … k-1.
-
 for task in selected_tasks:
-    
     for i in range(len(mix_used)):
         mix = mix_used[i]
         size = size_used[i]
         step = step_used[i]
         seed = seed_used[i]
-        
         mask = (
-        (metrics_df['task'] == task) &
-        (metrics_df['seed'] == seed) &
-        (metrics_df['mix'] == mix) &
-        (metrics_df['size'] == size) &
-        (metrics_df['step'] == step)
+            (folds_df['task'] == task) &
+            (folds_df['seed'] == seed) &
+            (folds_df['mix'] == mix) &
+            (folds_df['size'] == size) &
+            (folds_df['step'] == step)
         )
-
         expanded = (
-            metrics_df.loc[mask]
+            folds_df.loc[mask]
             .assign(fold=[list(range(k))] * mask.sum())
             .explode('fold')
         )
-
-        metrics_df = pd.concat(
-            [metrics_df.loc[~mask], expanded],
+        folds_df = pd.concat(
+            [folds_df.loc[~mask], expanded],
             ignore_index=True
         )
 
-print(metrics_df[(metrics_df['task']=='hellaswag') & (metrics_df['fold'].notna())]['size'].unique())
-
-        
-#print(metrics_df['fold'].unique())
-#display(metrics_df[metrics_df['fold'].notna()].head(10))
-
-# Get score_per_fold for each task folds
+# Get score_per_fold for each task folds in folds_df
 for task in selected_tasks:
     for i in range(len(mix_used)):
         mix = mix_used[i]
         step = step_used[i]
-
         for i in range(k):
-            # note : make sure product is still ok using new models to evaluate folds
-            score_fold = compute_score_model(task, mix, step, f"fold_{i}") # note : will need to update fn if there are several sizes
-            #print(f"score_fold for task {task} mix {mix} step {step} fold {i} is {score_fold}")
+            score_fold = compute_score_model(task, mix, step, f"fold_{i}")
             mask = (
-                (metrics_df['task'] == task) &
-                (metrics_df['mix'] == mix) &
-                (metrics_df['step'] == step) &
-                (metrics_df['fold'] == i)
+                (folds_df['task'] == task) &
+                (folds_df['mix'] == mix) &
+                (folds_df['step'] == step) &
+                (folds_df['fold'] == i)
             )
+            folds_df.loc[mask, 'score_per_fold'] = score_fold
 
-            metrics_df.loc[mask, 'score_per_fold'] = score_fold
-            #display(metrics_df[metrics_df['score_per_fold'].notna()].head(10))
-
-#display(metrics_df[metrics_df['score_per_fold'].notna()].head(10))
+print(folds_df[(folds_df['task']=='hellaswag') & (folds_df['fold'].notna())]['size'].unique())
 
 
 # STEP 1 : Get measures of signal and noises
@@ -115,35 +104,36 @@ for task in selected_tasks:
 # Compute per-task benchmark noise from baseline 20M fold scores, then assign to all sizes
 benchmark_noise_by_task = {}
 bench_recap = {}
+
 for i, task in enumerate(selected_tasks):
+    
     base_mask = (
-        (metrics_df['task'] == task) &
-        (metrics_df['mix'].isin(mix_used)) &
-        (metrics_df['size'].isin(size_used)) &
-        (metrics_df['seed'].isin(seed_used)) &
-        (metrics_df['step'].isin(step_used)) &
-        (metrics_df['fold'].notna())
+        (folds_df['task'] == task) &
+        (folds_df['mix'].isin(mix_used)) &
+        (folds_df['size'].isin(size_used)) &
+        (folds_df['seed'].isin(seed_used)) &
+        (folds_df['step'].isin(step_used)) &
+        (folds_df['fold'].notna())
     )
-    #display(metrics_df[base_mask].head(10))
-    scores = metrics_df.loc[base_mask, 'score_per_fold'].values
+    scores = folds_df.loc[base_mask, 'score_per_fold'].values
+    
     if np.isnan(scores).any():
         print(f"Warning: NaN scores found for task {task} in benchmark noise computation.")
-
-    # average of 'score_per_fold' over folds
+    
     for i in range(k):
-        fold_mask = base_mask & (metrics_df['fold'] == i)
-        fold_scores = metrics_df.loc[fold_mask, 'score_per_fold'].values
+        fold_mask = base_mask & (folds_df['fold'] == i)
+        fold_scores = folds_df.loc[fold_mask, 'score_per_fold'].values
         bench_recap[(task, f"fold_{i}")] = fold_scores
-        # CHECK: There should be 3 values in fold_scores since 3 models have been evaluated on each fold
-
-    smoothed_scores = [np.mean(bench_recap[(task, f"fold_{i}")]) for i in range(k)] # CHECK: It's a list of length k
+    
+    smoothed_scores = [np.mean(bench_recap[(task, f"fold_{i}")]) for i in range(k)]
+    
     if len(smoothed_scores) >= 2:
         mean_smoothed_scores = np.mean(smoothed_scores)
         if np.isfinite(mean_smoothed_scores) and mean_smoothed_scores > 0:
             benchmark_noise_by_task[task] = np.std(smoothed_scores, ddof=0) / mean_smoothed_scores
-            #print(f"Benchmark noise for task {task} is {benchmark_noise_by_task[task]}, NEW")
 
-# Store the same per-task benchmark noise on all rows of that task
+
+# Store the same per-task benchmark noise on all rows of that task in metrics_df
 for task, bn in benchmark_noise_by_task.items():
     metrics_df.loc[metrics_df['task'] == task, 'fold_std'] = bn
 
@@ -177,7 +167,7 @@ for seed, task, size in tqdm(product(selected_seeds, selected_tasks, selected_si
         
     )
     metrics_df.loc[(metrics_df['task'] == task) & (metrics_df['size'] == size) & (metrics_df['seed'] == seed), 'decision_accuracy'] = decision_accuracy
-    #print(f"Decision accuracy for task {task} size {size} seed {seed} is {decision_accuracy}")
+
 #display(metrics_df.head(10))
 
 # STEP 3 : Get mix_data to average noise and signal measures over seeds
@@ -195,8 +185,8 @@ for size in selected_sizes[:-1]:
         if len(mix_data) == 0:
             continue
 
-        m_mean = mix_data['mean'].values[0]
-        print("m_mean is ", m_mean)
+        m_mean = mix_data['mean'].values[0] # All mean values are the same
+
         if not np.isfinite(m_mean) or m_mean <= 0:
             # mean used for normalization must be positive and finite
             continue
@@ -206,7 +196,7 @@ for size in selected_sizes[:-1]:
         rel_dispersion     = (np.mean(mix_data['max']) - np.mean(mix_data['min'])) / m_mean
         decision_accuracy         = np.mean(mix_data['decision_accuracy'])
         bench_noise = benchmark_noise_by_task.get(task, np.nan)
-        
+                
         # Require finite and positive SNR ingredients
         if not (np.isfinite(rel_spread) and np.isfinite(step_noise) and np.isfinite(rel_dispersion) and np.isfinite(decision_accuracy)):
             continue
@@ -468,7 +458,7 @@ ax_step_bench.grid(True, linestyle='--', alpha=0.3)
 ax_step_bench.set_xscale('log')
 ax_step_bench.set_yscale('log')
 fig.suptitle('Step-to-step noise vs Benchmark noise')
-fig.savefig('step_to_step_vs_benchmark_noise_150M_1B.png', dpi=300)
+fig.savefig('step_to_step_vs_benchmark_noise_complete.png', dpi=300)
 plt.tight_layout()
 #plt.show()
 
