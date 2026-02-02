@@ -28,7 +28,7 @@ SIZES = ['60M', '90M', '150M', '300M', '530M', '750M', '1B']
 k = 5  # number of folds per task
 metric = 'primary_metric'
 selected_tasks = ['arc_easy', 'csqa', 'hellaswag', 'openbookqa', 'socialiqa', 'winogrande'] # removed 'boolq', 'piqa', 'arc_challenge'
-selected_sizes = [ '150M', '1B']
+selected_sizes = [ '150M', '300M', '530M', '750M', '1B']
 selected_seeds = SEEDS
 
 # Setup to get models (i.e. (mix, seed, size, step)) evaluated on k-folds
@@ -36,9 +36,9 @@ models_used = ['DCLM-baseline-20M-5xC', 'dolma17-25p-DCLM-baseline-75p-150M-5xC'
 # used 'allenai/DataDecide-dclm-baseline-20M' # 'DCLM-baseline-20M-5xC'
 # and 'allenai/DataDecide-dclm-baseline-75p-dolma1.7-25p-150M', 'allenai/DataDecide-falcon-and-cc-qc-orig-10p-530M'
 mix_used = ['DCLM-baseline', 'dolma17-25p-DCLM-baseline-75p', 'falcon_and_cc_tulu_qc_top10']
-size_used = ['20M']
-seed_used = [6198]
-step_used = [14594, 38157, 57500]
+size_used = ['20M', '150M', '530M']
+seed_used = [6198, 6198, 6198] # default seed
+step_used = [14594, 38157, 57776] # changed 57500 to 57776
 
 
 # STEP 0 : get dataframe with [task, mix, seed, size, score_per_fold, step, primary_metric]
@@ -48,12 +48,17 @@ metrics_df = df[df['size'].isin(selected_sizes) | df['size'].isin(size_used)]
 metrics_df = metrics_df[metrics_df['task'].isin(selected_tasks) | metrics_df['task'].isin(TASKS)]
 metrics_df = metrics_df[['task', 'mix', 'size', 'seed', 'step', 'primary_metric']]
 
+
 #display(metrics_df.head(10))
 # Duplicate each row corresponding to the model(s) evaluated on the k-folds k times and assign fold = 0 … k-1.
 
 for task in selected_tasks:
     
-    for (mix, size, seed, step) in product(mix_used, size_used, seed_used, step_used):
+    for i in range(len(mix_used)):
+        mix = mix_used[i]
+        size = size_used[i]
+        step = step_used[i]
+        seed = seed_used[i]
         
         mask = (
         (metrics_df['task'] == task) &
@@ -73,26 +78,32 @@ for task in selected_tasks:
             [metrics_df.loc[~mask], expanded],
             ignore_index=True
         )
+
+print(metrics_df[(metrics_df['task']=='hellaswag') & (metrics_df['fold'].notna())]['size'].unique())
+
         
 #print(metrics_df['fold'].unique())
 #display(metrics_df[metrics_df['fold'].notna()].head(10))
 
 # Get score_per_fold for each task folds
+for task in selected_tasks:
+    for i in range(len(mix_used)):
+        mix = mix_used[i]
+        step = step_used[i]
 
-for (task, mix, step) in product(selected_tasks, mix_used, step_used):
-    for i in range(k):
-        # note : make sure product is still ok using new models to evaluate folds
-        score_fold = compute_score_model(task, mix, step, f"fold_{i}") # note : will need to update fn if there are several sizes
-        #print(f"score_fold for task {task} mix {mix} step {step} fold {i} is {score_fold}")
-        mask = (
-            (metrics_df['task'] == task) &
-            (metrics_df['mix'] == mix) &
-            (metrics_df['step'] == step) &
-            (metrics_df['fold'] == i)
-        )
+        for i in range(k):
+            # note : make sure product is still ok using new models to evaluate folds
+            score_fold = compute_score_model(task, mix, step, f"fold_{i}") # note : will need to update fn if there are several sizes
+            #print(f"score_fold for task {task} mix {mix} step {step} fold {i} is {score_fold}")
+            mask = (
+                (metrics_df['task'] == task) &
+                (metrics_df['mix'] == mix) &
+                (metrics_df['step'] == step) &
+                (metrics_df['fold'] == i)
+            )
 
-        metrics_df.loc[mask, 'score_per_fold'] = score_fold
-        #display(metrics_df[metrics_df['score_per_fold'].notna()].head(10))
+            metrics_df.loc[mask, 'score_per_fold'] = score_fold
+            #display(metrics_df[metrics_df['score_per_fold'].notna()].head(10))
 
 #display(metrics_df[metrics_df['score_per_fold'].notna()].head(10))
 
@@ -161,8 +172,9 @@ for seed, task, size in tqdm(product(selected_seeds, selected_tasks, selected_si
     score_size_sorted = score_size.sort_values('score', ascending=False)
 
     decision_accuracy = compute_decision_accuracy(
-        mixes_size = score_size_sorted['mix'].tolist(),
-        mixes_1b = score_1b_sorted['mix'].tolist()
+        mixes_1b = score_1b_sorted['mix'].tolist(),
+        mixes_size = score_size_sorted['mix'].tolist()
+        
     )
     metrics_df.loc[(metrics_df['task'] == task) & (metrics_df['size'] == size) & (metrics_df['seed'] == seed), 'decision_accuracy'] = decision_accuracy
     #print(f"Decision accuracy for task {task} size {size} seed {seed} is {decision_accuracy}")
@@ -183,7 +195,8 @@ for size in selected_sizes[:-1]:
         if len(mix_data) == 0:
             continue
 
-        m_mean = np.mean(mix_data['mean'])
+        m_mean = mix_data['mean'].values[0]
+        print("m_mean is ", m_mean)
         if not np.isfinite(m_mean) or m_mean <= 0:
             # mean used for normalization must be positive and finite
             continue
