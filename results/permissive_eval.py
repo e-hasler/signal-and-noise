@@ -47,7 +47,7 @@ class FlexibleHellaswag(OriginalHellaswag):
             if ds is None:
                 try:
                     ds = load_dataset("ehasler/hellaswag-k5-folds", split=fold_name)
-                    print(f"✓ Loaded {fold_name} from HF hub: {len(ds)} instances")
+                    print(f"✓ Loaded {fold_name} from HF hub: {len(ds)} instances") # type: ignore
                 except Exception as e:
                     print(f"Failed to load HF dataset ehasler/hellaswag-k5-folds:{fold_name}: {e}")
                     # As a last resort, fallback to parent download and normal validation
@@ -97,7 +97,7 @@ class FlexibleARCEasy(OriginalARCEasy):
             if ds is None:
                 try:
                     ds = load_dataset("ehasler/arc-easy-k5-folds", split=fold_name)
-                    print(f"✓ Loaded {fold_name} from HF hub: {len(ds)} instances")
+                    print(f"✓ Loaded {fold_name} from HF hub: {len(ds)} instances") # type: ignore
                 except Exception as e:
                     print(f"Failed to load HF dataset ehasler/arc-easy-k5-folds:{fold_name}: {e}")
                     # As a last resort, fallback to parent download and normal validation
@@ -155,7 +155,7 @@ def create_flexible_task(task_name: str, original_task_class):
                 if ds is None:
                     try:
                         ds = load_dataset(f"ehasler/{task_name}-k5-folds", split=fold_name)
-                        print(f"✓ Loaded {fold_name} from HF hub: {len(ds)} instances")
+                        print(f"✓ Loaded {fold_name} from HF hub: {len(ds)} instances") # type: ignore
                     except Exception as e:
                         print(f"Failed to load HF dataset ehasler/{task_name}-k5-folds:{fold_name}: {e}")
                         return super().download(data_dir=data_dir, cache_dir=cache_dir, download_mode=download_mode)
