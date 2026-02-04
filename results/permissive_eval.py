@@ -2,12 +2,17 @@
 Wrapper that registers FlexibleHellaswag task, then calls oe_eval
 """
 import os
+import sys
 from typing import Optional
 from datasets import load_dataset, load_from_disk, DatasetDict
-import sys
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from deps.olmes.oe_eval.tasks.oe_eval_tasks import TASK_REGISTRY
+# Add deps/olmes to path so we can import oe_eval modules the same way run_eval.py does
+deps_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "deps", "olmes")
+sys.path.insert(0, deps_path)
+
+from oe_eval.tasks.oe_eval_tasks import TASK_REGISTRY
+
+
 
 # Get the original HellaSwag task class
 OriginalHellaswag = TASK_REGISTRY['hellaswag']
