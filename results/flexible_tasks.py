@@ -53,3 +53,4 @@ TASK_REGISTRY['piqa_flexible'] = create_flexible_task('piqa', TASK_REGISTRY['piq
 TASK_REGISTRY['socialiqa_flexible'] = create_flexible_task('socialiqa', TASK_REGISTRY['socialiqa'])
 TASK_REGISTRY['winogrande_flexible'] = create_flexible_task('winogrande', TASK_REGISTRY['winogrande'])
 print(f"Registered {len([k for k in TASK_REGISTRY.keys() if 'flexible' in k])} flexible tasks", flush=True)
+print("namely :", [k for k in TASK_REGISTRY.keys() if 'flexible' in k], flush=True)
