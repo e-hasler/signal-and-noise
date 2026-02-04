@@ -139,7 +139,7 @@ def create_flexible_task(task_name: str, original_task_class):
     """
     class FlexibleTask(original_task_class):
         def __init__(self, *args, **kwargs):
-            #self._fold_split = kwargs.get('task_config', {}).get('split')
+            self._fold_split = kwargs.get('task_config', {}).get('split')
             super().__init__(*args, **kwargs)
         
         def download(self, data_dir: Optional[str] = None, cache_dir: Optional[str] = None, download_mode=None):  # type: ignore
