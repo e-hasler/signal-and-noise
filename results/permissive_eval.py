@@ -10,6 +10,8 @@ from deps.olmes.oe_eval.tasks.oe_eval_tasks import TASK_REGISTRY
 OriginalHellaswag = TASK_REGISTRY['hellaswag']
 OriginalARCEasy = TASK_REGISTRY['arc_easy']
 
+print(__file__, flush=True)
+
 # Define and register custom hellaswag task
 class FlexibleHellaswag(OriginalHellaswag):
     """HellaSwag task that accepts custom splits like fold_0, fold_1"""
@@ -58,8 +60,8 @@ class FlexibleHellaswag(OriginalHellaswag):
         return super().download(data_dir=data_dir, cache_dir=cache_dir, download_mode=download_mode)
 
 # Register the custom task in TASK_REGISTRY
-TASK_REGISTRY['hellaswag_flexible'] = FlexibleHellaswag  # type: ignore
-print("✓ Registered hellaswag_flexible task")
+#TASK_REGISTRY['hellaswag_flexible'] = FlexibleHellaswag  # type: ignore
+#print("✓ Registered hellaswag_flexible task")
 
 class FlexibleARCEasy(OriginalARCEasy):
     """ARCEasy task that accepts custom splits like fold_0, fold_1"""
@@ -93,10 +95,10 @@ class FlexibleARCEasy(OriginalARCEasy):
                     print(f"Failed to load local folds from {local_path}: {e}")
             if ds is None:
                 try:
-                    ds = load_dataset("ehasler/arc-easy-k5-folds", split=fold_name)
+                    ds = load_dataset("ehasler/arc_easy-k5-folds", split=fold_name) # changed arc-easy to arc_easy
                     print(f"✓ Loaded {fold_name} from HF hub: {len(ds)} instances")
                 except Exception as e:
-                    print(f"Failed to load HF dataset ehasler/arc-easy-k5-folds:{fold_name}: {e}")
+                    print(f"Failed to load HF dataset ehasler/arc_easy-k5-folds:{fold_name}: {e}")
                     # As a last resort, fallback to parent download and normal validation
                     return super().download(data_dir=data_dir, cache_dir=cache_dir, download_mode=download_mode)
             # Expose fold as validation split
@@ -110,8 +112,8 @@ class FlexibleARCEasy(OriginalARCEasy):
 
 
 # Register the custom arc easy task in TASK_REGISTRY
-TASK_REGISTRY['arc_easy_flexible'] = FlexibleARCEasy  # type: ignore
-print("✓ Registered arc_easy_flexible task")
+#TASK_REGISTRY['arc_easy_flexible'] = FlexibleARCEasy  # type: ignore
+#print("✓ Registered arc_easy_flexible task")
 
 # Get task classes for remaining benchmarks
 OriginalBoolq = TASK_REGISTRY.get('boolq')
@@ -124,18 +126,22 @@ OriginalWinogrande = TASK_REGISTRY.get('winogrande')
 
 # Create flexible wrapper for each task
 def create_flexible_task(task_name: str, original_task_class):
-    """Factory function to create flexible task wrapper"""
-    if original_task_class is None:
-        print(f"⚠ Warning: Task {task_name} not found in TASK_REGISTRY")
-        return None
+    """
+    Duplicate the task configuration of an existing task,
     
+    
+    :param task_name: Description
+    :type task_name: str
+    :param original_task_class: Description
+    """
     class FlexibleTask(original_task_class):
         def __init__(self, *args, **kwargs):
-            self._fold_split = kwargs.get('task_config', {}).get('split')
+            #self._fold_split = kwargs.get('task_config', {}).get('split')
             super().__init__(*args, **kwargs)
         
         def download(self, data_dir: Optional[str] = None, cache_dir: Optional[str] = None, download_mode=None):  # type: ignore
             split = self.task_config.get("split")
+            print("======== SPLIT ============", split)
             if isinstance(split, str) and split.startswith("fold_"):
                 fold_name = split
                 local_path = os.path.join("data", "k_folds", f"{task_name}_k5_seed0")
@@ -158,10 +164,10 @@ def create_flexible_task(task_name: str, original_task_class):
                         return super().download(data_dir=data_dir, cache_dir=cache_dir, download_mode=download_mode)
                 
                 # Add missing idx/id field if needed
-                native_id_field = self.task_config.get("native_id_field") or "idx"
+                """native_id_field = self.task_config.get("native_id_field") or "idx"
                 if native_id_field not in ds.column_names: # type: ignore
                     ds = ds.map(lambda example, idx: {**example, native_id_field: idx}, with_indices=True) # type: ignore
-                    print(f"✓ Added {native_id_field} field to fold dataset")
+                    print(f"✓ Added {native_id_field} field to fold dataset") """
                 
                 # Remap fields for compatibility with oe_eval tasks
                 field_mapping = {
@@ -177,11 +183,21 @@ def create_flexible_task(task_name: str, original_task_class):
                 self.dataset = DatasetDict({"validation": ds})  # type: ignore
                 self.task_config["split"] = "validation"
                 return
+            print(f"HEREEEEE22222")
             return super().download(data_dir=data_dir, cache_dir=cache_dir, download_mode=download_mode)
-    
+    print(f"HEREEEEE")
     return FlexibleTask
 
 # Register flexible tasks
+if OriginalHellaswag:
+    FlexibleHellaswag = create_flexible_task('hellaswag', OriginalHellaswag)
+    TASK_REGISTRY['hellaswag_flexible'] = FlexibleHellaswag  # type: ignore
+    print("✓ Registered hellaswag_flexible task")
+if OriginalARCEasy:
+    FlexibleARCEasy = create_flexible_task('arc_easy', OriginalARCEasy)
+    TASK_REGISTRY['arc_easy_flexible'] = FlexibleARCEasy  # type: ignore
+    print("✓ Registered arc_easy_flexible task")
+
 if OriginalBoolq:
     FlexibleBoolq = create_flexible_task('boolq', OriginalBoolq)
     TASK_REGISTRY['boolq_flexible'] = FlexibleBoolq  # type: ignore
@@ -205,12 +221,12 @@ if OriginalPIQA:
 if OriginalSocialIQA:
     FlexibleSocialIQA = create_flexible_task('socialiqa', OriginalSocialIQA)
     TASK_REGISTRY['socialiqa_flexible'] = FlexibleSocialIQA  # type: ignore
-    print("✓ Registered socialiqa_flexible task")
+    print("ooooooo Registered socialiqa_flexible task")
 
 if OriginalWinogrande:
     FlexibleWinogrande = create_flexible_task('winogrande', OriginalWinogrande)
     TASK_REGISTRY['winogrande_flexible'] = FlexibleWinogrande  # type: ignore
-    print("✓ Registered winogrande_flexible task")
+    print("oooooo Registered winogrande_flexible task")
 
 # MMLU is skipped - it's per-subject tasks (mmlu_abstract_algebra, etc.), not a single task
 
