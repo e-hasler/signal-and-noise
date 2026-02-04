@@ -8,6 +8,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from deps.olmes.oe_eval.tasks.oe_eval_tasks import TASK_REGISTRY
 
 def create_flexible_task(task_name: str, original_task_class):
+    print(f"Registering flexible task for {task_name}")
     class FlexibleTask(original_task_class):
         def download(self, data_dir: Optional[str] = None, cache_dir: Optional[str] = None, download_mode=None):
             split = self.task_config.get("split")
