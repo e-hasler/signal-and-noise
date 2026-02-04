@@ -83,7 +83,7 @@ class FlexibleARCEasy(OriginalARCEasy):
 
         If split is fold_*, we try to load from local saved DatasetDict at
         data/k_folds/hellaswag_k5_seed0; if not present, fall back to HF hub
-        repo ehasler/arc-easy-k5-folds. Otherwise, use the parent download.
+        repo ehasler/arc_easy-k5-folds. Otherwise, use the parent download.
         """
         split = self.task_config.get("split")
         if isinstance(split, str) and split.startswith("fold_"):
@@ -101,10 +101,10 @@ class FlexibleARCEasy(OriginalARCEasy):
                     print(f"Failed to load local folds from {local_path}: {e}")
             if ds is None:
                 try:
-                    ds = load_dataset("ehasler/arc-easy-k5-folds", split=fold_name)
+                    ds = load_dataset("ehasler/arc_easy-k5-folds", split=fold_name)
                     print(f"✓ Loaded {fold_name} from HF hub: {len(ds)} instances") # type: ignore
                 except Exception as e:
-                    print(f"Failed to load HF dataset ehasler/arc-easy-k5-folds:{fold_name}: {e}")
+                    print(f"Failed to load HF dataset ehasler/arc_easy-k5-folds:{fold_name}: {e}")
                     # As a last resort, fallback to parent download and normal validation
                     return super().download(data_dir=data_dir, cache_dir=cache_dir, download_mode=download_mode)
             # Expose fold as validation split
