@@ -1,5 +1,5 @@
 """
-Wrapper that registers FlexibleHellaswag task, then calls oe_eval
+Wrapper that registers Flexible tasks (Tasks with k-fold splits), then calls oe_eval
 """
 import os
 import sys
