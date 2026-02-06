@@ -1,3 +1,7 @@
+"""
+Create k-folds on benchmarks and push to HuggingFace hub
+"""
+
 import numpy as np
 import pandas as pd
 from snr.download.hf import pull_predictions_from_hf
@@ -7,7 +11,6 @@ import os
 import subprocess
 import math
 from snr_utils import compute_score_model
-# Code to create k-folds on benchmarks and push to HuggingFace hub
 
 
 
