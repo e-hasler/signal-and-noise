@@ -1,3 +1,7 @@
+"""
+Verify consistency of k-fold splits for HellaSwag dataset
+"""
+
 from datasets import DatasetDict, load_dataset
 import os
 from collections import Counter
@@ -5,11 +9,11 @@ from collections import Counter
 # Load the original dataset
 print("Loading original HellaSwag dataset...")
 original = load_dataset('Rowan/hellaswag', split='validation')
-print(f"Original dataset size: {len(original)} instances")
+print(f"Original dataset size: {len(original)} instances") # type: ignore
 
 # Check for duplicate IDs in the original dataset
 print("\nChecking for duplicate IDs in original dataset...")
-original_ids = original['ind']
+original_ids = original['ind'] # type: ignore
 id_counts = Counter(original_ids)
 duplicates = {id_val: count for id_val, count in id_counts.items() if count > 1}
 
